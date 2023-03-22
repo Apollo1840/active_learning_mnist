@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from .model import mlp_classifier
 
+
 def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
     """
 
@@ -83,7 +84,6 @@ def least_confidence_strategy(indices, predictions):
 
 
 if __name__ == '__main__':
-
     # prepare data
     mnist = tf.keras.datasets.mnist
     (x_train, y_train), (x_test, y_test) = mnist.load_data()

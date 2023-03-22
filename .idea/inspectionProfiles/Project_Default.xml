@@ -1,0 +1,33 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyChainedComparisonsInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoreConstantInTheMiddle" value="true" />
+    </inspection_tool>
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="5">
+            <item index="0" class="java.lang.String" itemvalue="wfdb" />
+            <item index="1" class="java.lang.String" itemvalue="tensorflow" />
+            <item index="2" class="java.lang.String" itemvalue="keras" />
+            <item index="3" class="java.lang.String" itemvalue="tensorflow-gpu" />
+            <item index="4" class="java.lang.String" itemvalue="numpy" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="relocate" />
+          <option value="ecgAI.ecg_data_model.importer.source_parser.physionet2020.Cinc2020LabelfileParser.frequency" />
+          <option value="ecgAI.ecg_data_model.importer.source_parser.physionet2020.Cinc2020LabelfileParser.deserialize" />
+          <option value="ecgAI.ecg_data_model.importer.ecg_importer.edf_filename" />
+          <option value="ecgAI.ecg_data_model.importer.SourceBook" />
+          <option value="ecgAI.ecg_data_model.importer.source_parser.csn2022.CSN2022LabelfileParser" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
