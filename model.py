@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def mlp_classifier():
     model = tf.keras.models.Sequential([
         tf.keras.layers.Flatten(input_shape=(28, 28)),
@@ -10,4 +11,3 @@ def mlp_classifier():
                   loss='sparse_categorical_crossentropy',
                   metrics=['accuracy'])
     return model
-

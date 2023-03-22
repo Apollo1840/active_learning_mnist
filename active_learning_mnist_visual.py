@@ -1,19 +1,12 @@
-"""
-
-This code is highly inspired by gtoubassi from github: https://github.com/gtoubassi/active-learning-mnist/blob/master/Active_Learning_with_MNIST.ipynb
-
-"""
-
-import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
-from .model import mlp_classifier
-from .active_learning_mnist import (trivial_strategy,
-                                    max_entropy_strategy,
-                                    least_margin_strategy,
-                                    least_confidence_strategy)
+from model import mlp_classifier
+from active_learning_mnist import (trivial_strategy,
+                                   max_entropy_strategy,
+                                   least_margin_strategy,
+                                   least_confidence_strategy)
 
 
 def plot_prioritization_strategy(data, model, prioritizer):
@@ -23,26 +16,31 @@ def plot_prioritization_strategy(data, model, prioritizer):
     :param prioritizer: lamdba: indices, predictions: sorted indices
     :return:
     """
-    query_steps = 20
-    query_size = 500
+    query_steps = 100
+    query_size = 100
 
     x_train, y_train, x_test, y_test = data
 
-    train_indices = range(10000)
+    train_indices = range(query_steps * query_size)
+
+    tsne = TSNE(n_components=2, random_state=42)
+    print("operating t-SNE ...")
+    x_tsne = tsne.fit_transform(x_train[train_indices, ...].reshape((len(train_indices), -1)))
+    print("t-SNE done")
 
     # First subset of data
-    selected_indices = train_indices[0:query_size]
-    x_train_subset = x_train[selected_indices, ...]
-    y_train_subset = y_train[selected_indices, ...]
-
-    for i in range(query_steps):
+    subset_indices = []
+    for i in range(query_steps // 2):
         selected_indices = train_indices[0:query_size]
+        subset_indices += selected_indices
 
-        if i > 0:
-            x_train_subset = np.concatenate((x_train_subset, x_train[selected_indices, ...]))
-            y_train_subset = np.concatenate((y_train_subset, y_train[selected_indices, ...]))
+        x_train_subset = x_train[subset_indices, ...]
+        y_train_subset = y_train[subset_indices, ...]
 
-        plot_train_set(x_train, x_train_subset)
+        if i % 5 == 0:
+            print("> selected {} data ({:.2f}%)".format(len(subset_indices),
+                                                        len(subset_indices) / (query_size * query_steps)))
+            plot_train_set(x_tsne, subset_indices)
 
         model.fit(x_train_subset, y_train_subset, epochs=5, verbose=0)
 
@@ -55,28 +53,22 @@ def plot_prioritization_strategy(data, model, prioritizer):
     print("- finished -")
 
 
-def plot_train_set(x_train, x_train_subset, x_train_dim2=None):
-    # Apply t-SNE to x_train only
-    tsne = TSNE(n_components=2, random_state=42)
+def plot_train_set(x_tsne, selected_indices):
+    # Separate the transformed arrays back into their original parts
+    x_subset_tsne = x_tsne[selected_indices, :]
 
-    x_concat = np.concatenate((x_train, x_train_subset), axis=0)
-
-    x_train_tsne = tsne.fit_transform(x_train)
-    x_concat_tsne = tsne.fit_transform(x_concat)
-    # Apply the trained t-SNE model to both datasets
-    x_train_subset_tsne = tsne.transform(x_train_subset)
-
-    # Create a scatter plot
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.scatter(x_train_tsne[:, 0], x_train_tsne[:, 1], c='b', s=20)
-    ax.scatter(x_train_subset_tsne[:, 0], x_train_subset_tsne[:, 1], c='orange', s=5)
+    # Create a scatter plot using plt.plot
+    plt.figure(figsize=(8, 8))
+    plt.plot(x_tsne[:, 0], x_tsne[:, 1], 'bo', markersize=10, label='x_train', markeredgecolor="none")
+    plt.plot(x_subset_tsne[:, 0], x_subset_tsne[:, 1], 'o', color='orange', markersize=2,
+             label='x_train_subset')
 
     # Set axis labels and title
-    ax.set_xlabel('t-SNE 1')
-    ax.set_ylabel('t-SNE 2')
-    ax.set_title('t-SNE Plot of x_train and x_train_subset')
+    plt.xlabel('t-SNE 1')
+    plt.ylabel('t-SNE 2')
+    plt.title('t-SNE Plot of x_train and x_train_subset')
+    plt.legend()
     plt.show()
-
 
 
 if __name__ == '__main__':
@@ -87,14 +79,7 @@ if __name__ == '__main__':
     data = x_train, y_train, x_test, y_test
 
     # get results of different AL method
-    acc_baseline = plot_prioritization_strategy(data, mlp_classifier(), trivial_strategy)
-    acc_entropy = plot_prioritization_strategy(data, mlp_classifier(), max_entropy_strategy)
-    acc_bt = plot_prioritization_strategy(data, mlp_classifier(), least_margin_strategy)
-    acc_vr = plot_prioritization_strategy(data, mlp_classifier(), least_confidence_strategy)
-
-    # visualize the performance difference
-    plt.plot(acc_baseline, 'k', label='baseline')
-    plt.plot(acc_entropy, 'b', label='least confidence')
-    plt.plot(acc_bt, 'g', label='highest entropy')
-    plt.plot(acc_vr, 'r', label='least margin')
-    plt.legend()
+    plot_prioritization_strategy(data, mlp_classifier(), trivial_strategy)
+    plot_prioritization_strategy(data, mlp_classifier(), max_entropy_strategy)
+    plot_prioritization_strategy(data, mlp_classifier(), least_margin_strategy)
+    plot_prioritization_strategy(data, mlp_classifier(), least_confidence_strategy)

@@ -8,7 +8,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-from .model import mlp_classifier
+from model import mlp_classifier
 
 
 def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
