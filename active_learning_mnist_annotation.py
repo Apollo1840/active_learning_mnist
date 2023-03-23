@@ -2,6 +2,10 @@ import tensorflow as tf
 import threading
 import random
 from mnist_annotation import AnnotationTool, cnn
+from active_learning_mnist import (trivial_strategy,
+                                   max_entropy_strategy,
+                                   least_margin_strategy,
+                                   least_confidence_strategy)
 
 
 class ActiveAnnotationTool(AnnotationTool):
@@ -9,10 +13,10 @@ class ActiveAnnotationTool(AnnotationTool):
 
     def __init__(self, data, query_strategy, query_size=16):
         super().__init__(data, query_size)
-
-        print(self.query_size)
-
+        self.threads = [None, None]
         self.query_strategy = query_strategy
+
+        self.is_preparing = False
 
         self.unlabeled_indices = list(range(len(self.images)))
         self.annotated_indices = []
@@ -37,7 +41,7 @@ class ActiveAnnotationTool(AnnotationTool):
 
         if len(self.curr_batch) != 0:
             self.index = self.curr_batch.pop(0)
-        elif not self.is_training and self.next_batch:
+        elif len(self.next_batch) != 0:
             self.curr_batch = self.next_batch
             self.next_batch = []
             self.index = self.curr_batch.pop(0)
@@ -51,18 +55,26 @@ class ActiveAnnotationTool(AnnotationTool):
             self.destroy()
 
         if len(self.annotated_images) % self.query_size == 0 and not self.is_training:
-            threading.Thread(target=self.train_model).start()
+            t = threading.Thread(target=self.train_model)
+            t.start()
+            self.threads[0] = t
 
-        if len(self.next_batch) == 0 and not self.is_training:
-            threading.Thread(target=self.prepare_next_batch).start()
+        if len(self.next_batch) == 0 and not self.is_training and not self.is_preparing:
+            t = threading.Thread(target=self.prepare_next_batch)
+            t.start()
+            self.threads[1] = t
 
     def prepare_next_batch(self):
+        self.is_preparing = True
+
         remaining_indices = [i for i in self.unlabeled_indices if i not in self.annotated_indices]
         predictions = self.model.predict(self.images[remaining_indices])
         next_batch_indices = self.query_strategy(remaining_indices, predictions)[:self.query_size]
 
         # Update next_batch with the new batch
         self.next_batch = next_batch_indices
+
+        self.is_preparing = False
 
 
 if __name__ == "__main__":
@@ -72,7 +84,9 @@ if __name__ == "__main__":
     x_test = x_test.reshape(-1, 28, 28, 1) / 255.0
     data = x_train, y_train, x_test, y_test
 
-    trivial_strategy = lambda indices, pred: indices
-    annotation_tool = ActiveAnnotationTool(data, trivial_strategy)
+    #annotation_tool = ActiveAnnotationTool(data, trivial_strategy)
+    annotation_tool = ActiveAnnotationTool(data, least_margin_strategy)
     annotation_tool.connect(cnn())
     annotation_tool.mainloop()
+
+    annotation_tool.monitor(name="least_margin.png")

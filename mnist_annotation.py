@@ -5,6 +5,7 @@ from matplotlib.figure import Figure
 import tensorflow as tf
 import numpy as np
 import threading
+import matplotlib.pyplot as plt
 
 
 class AnnotationTool(tk.Tk):
@@ -21,8 +22,10 @@ class AnnotationTool(tk.Tk):
 
         self.model = None  # wait to be assigned
         self.acc_curr = 0
+        self.accs = []
         self.index = 0
         self.is_training = False
+        self.threads = [None]
 
         # construction the GUI
         self.title("MNIST Annotation Tool")
@@ -80,7 +83,9 @@ class AnnotationTool(tk.Tk):
             self.destroy()
 
         if len(self.annotated_images) % self.query_size == 0 and not self.is_training:
-            threading.Thread(target=self.train_model).start()
+            t = threading.Thread(target=self.train_model)
+            t.start()
+            self.threads[0] = t
 
     def train_model(self):
         self.is_training = True
@@ -93,6 +98,7 @@ class AnnotationTool(tk.Tk):
 
         self.model.fit(x_train, y_train, epochs=5, verbose=0)
         _, self.acc_curr = self.model.evaluate(self.x_test, self.y_test, verbose=0)
+        self.accs.append(self.acc_curr)
 
         ind = len(self.annotated_images) % self.query_size
         n_ann = len(self.annotated_images)
@@ -103,6 +109,13 @@ class AnnotationTool(tk.Tk):
     def on_close(self):
         print("Annotation tool closed.")
         self.destroy()
+
+    def monitor(self, name="accs.png"):
+        for t in self.threads:
+            t.join()
+        plt.plot(range(0, len(self.accs) * self.query_size, self.query_size), self.accs)
+        plt.show()
+        plt.savefig(name)
 
 
 def cnn():
@@ -131,3 +144,5 @@ if __name__ == "__main__":
     annotation_tool = AnnotationTool(data)
     annotation_tool.connect(cnn())
     annotation_tool.mainloop()
+
+    annotation_tool.monitor()

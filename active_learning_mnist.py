@@ -9,6 +9,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 
 from model import mlp_classifier
+import matplotlib.pyplot as plt
 
 
 def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
@@ -64,7 +65,7 @@ def max_entropy_strategy(indices, predictions):
     p = -p.sum(axis=1)
     p = list(zip(indices, p))
     p.sort(reverse=True, key=lambda x: x[1])  # sort in descending order
-    return list(zip(*p))[0]
+    return list(list(zip(*p))[0])
 
 
 def least_margin_strategy(indices, predictions):
@@ -73,14 +74,14 @@ def least_margin_strategy(indices, predictions):
     p = p[:, 0] - p[:, 1]
     p = list(zip(indices, p))
     p.sort(key=lambda x: x[1])  # sort in ascending order
-    return list(zip(*p))[0]
+    return list(list(zip(*p))[0])
 
 
 def least_confidence_strategy(indices, predictions):
     # variation ratio
     max_logit = list(zip(indices, np.amax(predictions, axis=1)))
     max_logit.sort(key=lambda x: x[1])  # sort in ascending order
-    return list(zip(*max_logit))[0]
+    return list(list(zip(*max_logit))[0])
 
 
 if __name__ == '__main__':
@@ -98,7 +99,7 @@ if __name__ == '__main__':
 
     # visualize the performance difference
     plt.plot(acc_baseline, 'k', label='baseline')
-    plt.plot(acc_entropy, 'b', label='least confidence')
-    plt.plot(acc_bt, 'g', label='highest entropy')
-    plt.plot(acc_vr, 'r', label='least margin')
+    plt.plot(acc_vr, 'b', label='least confidence')
+    plt.plot(acc_entropy, 'g', label='highest entropy')
+    plt.plot(acc_bt, 'r', label='least margin')
     plt.legend()
