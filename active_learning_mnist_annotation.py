@@ -1,63 +1,22 @@
-import tkinter as tk
-from tkinter import ttk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 import tensorflow as tf
-import numpy as np
 import threading
+import random
+from mnist_annotation import AnnotationTool
 
 
-class AnnotationTool(tk.Tk):
-    display_tmp = "Current batch: {ind}/16, total annotations: {n_annotations}\ncurrent model accuracy: {acc:.2f}"
+class ActiveAnnotationTool(AnnotationTool):
+    display_tmp = "Current batch: {ind}/{s_q}, total annotations: {n_ann}\ncurrent model accuracy: {acc:.2f}"
 
-    def __init__(self, data):
-        super().__init__()
+    def __init__(self, data, query_strategy, query_size=16):
+        super().__init__(data, query_size)
+        self.query_strategy = query_strategy
+        
+        self.unlabeled_indices = list(range(len(self.images)))
+        random.shuffle(self.unlabeled_indices)
+        self.curr_batch = self.unlabeled_indices[:self.query_size]
+        self.next_batch = []
 
-        self.images, self.labels, self.x_test, self.y_test = data
-        self.annotated_images = []
-        self.annotated_labels = []
-
-        self.model = None  # wait to be assigned
-
-        self.model_accuracy = tk.StringVar()
-        self.curr_accuracy = 0
-        self.model_accuracy.set(self.display_tmp.format(ind=0, n_annotations=0, acc=self.curr_accuracy))
-
-        self.title("MNIST Annotation Tool")
-        self.index = 0
-
-        self.figure = Figure(figsize=(5, 5), dpi=100)
-        self.ax = self.figure.add_subplot(111)
-        self.canvas = FigureCanvasTkAgg(self.figure, master=self)
-        self.canvas.draw()
-        self.canvas.get_tk_widget().pack()
-
-        self.label_var = tk.StringVar()
-        self.label_var.set(str(self.labels[self.index]))
-
-        self.label_entry = ttk.Entry(self, textvariable=self.label_var)
-        self.label_entry.pack()
-
-        self.ok_button = ttk.Button(self, text="OK", command=self.next_image)
-        self.ok_button.pack()
-
-        self.accuracy_label = ttk.Label(self, textvariable=self.model_accuracy)
-        self.accuracy_label.pack(anchor="ne")
-
-        self.protocol("WM_DELETE_WINDOW", self.on_close)
-        self.show_image()
-
-        self.is_training = False
-
-    def connect(self, model):
-        self.model = model
-
-    def show_image(self):
-        img = self.images[self.index]
-        img = img.reshape((28, 28))
-        self.ax.imshow(img, cmap="gray")
-        self.ax.set_title(f"Image {self.index}")
-        self.canvas.draw()
+        self.index = self.curr_batch.pop(0)
 
     def next_image(self):
         label = int(self.label_var.get())
@@ -66,42 +25,38 @@ class AnnotationTool(tk.Tk):
         self.annotated_images.append(self.images[self.index])
         self.annotated_labels.append(label)
 
-        ind = len(self.annotated_images) % 16
-        n_annotations = len(self.annotated_images)
-        self.model_accuracy.set(self.display_tmp.format(ind=ind, n_annotations=n_annotations, acc=self.curr_accuracy))
+        ind = len(self.annotated_images) % self.query_size
+        n_ann = len(self.annotated_images)
+        self.model_accuracy.set(self.display_tmp.format(ind=ind, q_s=self.query_size, n_ann=n_ann, acc=self.acc_curr))
 
-        self.index += 1
+        if self.curr_batch:
+            self.index = self.curr_batch.pop(0)
+        elif not self.is_training and self.next_batch:
+            self.curr_batch = self.next_batch
+            self.next_batch = []
+            self.index = self.curr_batch.pop(0)
+        else:
+            self.index = None
 
-        if self.index < len(self.images):
+        if self.index is not None:
             self.label_var.set(str(self.labels[self.index]))
             self.show_image()
         else:
             self.destroy()
 
-        if len(self.annotated_images) % 16 == 0 and not self.is_training:
+        if len(self.annotated_images) % self.query_size == 0 and not self.is_training:
             threading.Thread(target=self.train_model).start()
 
-    def train_model(self):
-        self.is_training = True
+        if not self.next_batch and not self.is_training:
+            threading.Thread(target=self.prepare_next_batch).start()
 
-        self.model_accuracy.set("Model is fitting, please wait...")
-        self.update()
+    def prepare_next_batch(self):
+        remaining_indices = [i for i in self.unlabeled_indices if i not in self.annotated_images]
+        predictions = self.model.predict(self.images[remaining_indices])
+        next_batch_indices = self.query_strategy(remaining_indices, predictions)[:self.query_size]
 
-        x_train = np.array(self.annotated_images)
-        y_train = np.array(self.annotated_labels)
-
-        self.model.fit(x_train, y_train, epochs=5, verbose=0)
-        _, self.curr_accuracy = self.model.evaluate(self.x_test, self.y_test, verbose=0)
-
-        ind = len(self.annotated_images) % 16
-        n_annotations = len(self.annotated_images)
-        self.model_accuracy.set(self.display_tmp.format(ind=ind, n_annotations=n_annotations, acc=self.curr_accuracy))
-
-        self.is_training = False
-
-    def on_close(self):
-        print("Annotation tool closed.")
-        self.destroy()
+        # Update next_batch with the new batch
+        self.next_batch = next_batch_indices
 
 
 def cnn():
@@ -127,6 +82,7 @@ if __name__ == "__main__":
     x_test = x_test.reshape(-1, 28, 28, 1) / 255.0
     data = x_train, y_train, x_test, y_test
 
-    annotation_tool = AnnotationTool(data)
+    trivial_strategy = lambda indices, pred: indices
+    annotation_tool = AnnotationTool(data, trivial_strategy)
     annotation_tool.connect(cnn())
     annotation_tool.mainloop()
