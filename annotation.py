@@ -39,8 +39,7 @@ class AnnotationTool(tk.Tk):
         self.label_var = tk.StringVar()
         self.label_var.set(str(self.labels[self.index]))
 
-        self.label_entry = ttk.Combobox(self, textvariable=self.label_var)
-        self.label_entry['values'] = list(range(10))
+        self.label_entry = ttk.Entry(self, textvariable=self.label_var)
         self.label_entry.pack()
 
         self.ok_button = ttk.Button(self, text="OK", command=self.next_image)
@@ -115,7 +114,6 @@ class AnnotationTool(tk.Tk):
         for t in self.threads:
             t.join()
         plt.plot(range(0, len(self.accs) * self.query_size, self.query_size), self.accs)
-        plt.grid()
         plt.show()
         plt.savefig(name)
 
