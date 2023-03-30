@@ -66,10 +66,7 @@ class ActiveAnnotationTool(AnnotationTool):
 
         remaining_indices = [i for i in self.unlabeled_indices if i not in self.annotated_indices]
         predictions = self.model.predict(self.images[remaining_indices])
-        next_batch_indices = self.query_strategy(remaining_indices, predictions)[:self.query_size]
-
-        # Update next_batch with the new batch
-        self.next_batch = next_batch_indices
+        self.next_batch = self.query_strategy(remaining_indices, predictions)[:self.query_size]
 
         self.is_preparing = False
 
