@@ -1,8 +1,14 @@
+"""
+
+visualize the selection process of the selective process of AL.
+
+"""
+
 import tensorflow as tf
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 
-from model import mlp_classifier
+from source.dl_model.mlp import mlp_classifier
 from active_learning_mnist import (trivial_strategy,
                                    max_entropy_strategy,
                                    least_margin_strategy,

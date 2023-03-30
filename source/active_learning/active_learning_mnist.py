@@ -6,9 +6,8 @@ This code is highly inspired by gtoubassi from github: https://github.com/gtouba
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 
-from model import mlp_classifier
+from source.dl_model.mlp import mlp_classifier
 import matplotlib.pyplot as plt
 
 

@@ -1,11 +1,8 @@
 import tensorflow as tf
 import threading
 import random
-from mnist_annotation import AnnotationTool, cnn
-from active_learning_mnist import (trivial_strategy,
-                                   max_entropy_strategy,
-                                   least_margin_strategy,
-                                   least_confidence_strategy)
+from annotation_tool_mnist import AnnotationTool, cnn
+from active_learning.active_learning_mnist import (least_margin_strategy)
 
 
 class ActiveAnnotationTool(AnnotationTool):
@@ -89,4 +86,4 @@ if __name__ == "__main__":
     annotation_tool.connect(cnn())
     annotation_tool.mainloop()
 
-    annotation_tool.monitor(name="least_margin.png")
+    annotation_tool.monitor(name="test.png")
