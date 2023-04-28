@@ -7,9 +7,9 @@ from .joint_entropy import *
 from .BALD import compute_conditional_entropy
 
 
-def get_batchbald_batch(log_probs_N_K_C: torch.Tensor,
+def get_batchbald_batch(probs_N_K_C,
                         query_batch_size: int,
-                        num_samples: int=1000,
+                        num_samples: int = 1000,
                         dtype=None,
                         device=None):
     """
@@ -18,7 +18,7 @@ def get_batchbald_batch(log_probs_N_K_C: torch.Tensor,
     batch_joint_entropy is the key of the trick introduced in the paper
 
     Args:
-        log_probs_N_K_C (torch.Tensor): Log probabilities of data points (N) with samples (K) and classes (C). Shape: (N, K, C)
+        probs_N_K_C (torch.Tensor): probabilities of data points (N) with samples (K) and classes (C). Shape: (N, K, C)
         query_batch_size (int): Number of data points to select in the batch.
         num_samples (int): Number of MC samples used for approximation.
         dtype (Optional[torch.dtype]): Data type for the tensors, defaults to None.
@@ -27,6 +27,7 @@ def get_batchbald_batch(log_probs_N_K_C: torch.Tensor,
     Returns:
         CandidateBatch: A tuple containing the scores and indices of the selected data points.
     """
+    log_probs_N_K_C = torch.from_numpy(probs_N_K_C).log().double()
 
     # Get the dimensions of log probabilities tensor
     N, K, C = log_probs_N_K_C.shape

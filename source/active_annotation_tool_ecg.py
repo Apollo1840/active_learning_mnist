@@ -79,7 +79,7 @@ class ActiveAnnotationTool(AnnotationTool):
         train_gen_unl = UnlabeledDataLoader(self.train_gen, self.unlabeled_indices, self.annotated_indices)
         indices_unl = train_gen_unl.unlabeled_indices
 
-        print("preparing the next_batch, observed {} data in the train_gen, unlabeled: {}, labeled: {}".format(
+        print("preparing the next_batch..., observed {} data in the train_gen, unlabeled: {}, labeled: {}".format(
             len(self.train_gen) * self.train_gen.batch_size, len(self.unlabeled_indices), len(self.annotated_indices)
         ))
 

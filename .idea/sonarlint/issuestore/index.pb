@@ -9,7 +9,3 @@ P
  source/active_annotation_tool.py,2/7/27bbd5a42209f0976b54667d1dabd993793f98cb
 O
 source/annotation_tool_mnist.py,9/5/9551d9849bd347634bbf8f14caf546ebc1ef8bbf
-V
-&source/active_annotation_tool_mnist.py,e/8/e85c0719ed807422213e1ccd109fad31ebe04ab4
-T
-$source/active_annotation_tool_ecg.py,b/9/b92830309c9193d8ad4a5aed6d1dcc899ab0f06f

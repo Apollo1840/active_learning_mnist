@@ -28,8 +28,8 @@ def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
     :return:
     """
 
-    query_steps = 40
-    query_size = 500
+    query_steps = 20
+    query_size = 16
 
     x_train, y_train, x_test, y_test = data
 
@@ -62,13 +62,13 @@ def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
         # copy the models 5 times, all weights of the model is dropout with a ratio of 0.2:
         predictions = []
         for i in range(5):
-            mc_model = model.copy()
+            mc_model = tf.keras.models.clone_model(model)
             dropped_out_weights = dropout_weights(mc_model.get_weights(), 0.2)
             mc_model.set_weights(dropped_out_weights)
             predictions.append(mc_model.predict(x_train[rest_indices, ...]))
 
-        predictions = np.transform(predictions, (1, 0, 2))  # return (N_samples, K_models, C_classes)
-        train_indices = prioritizer(rest_indices, predictions)
+        predictions = np.transpose(predictions, (1, 0, 2))  # return (N_samples, K_models, C_classes)
+        train_indices = prioritizer(rest_indices, predictions, query_size)
 
     print("- finished -")
     return test_accuracies
@@ -78,14 +78,12 @@ trivial_strategy = lambda indices, pred, batch_size: indices
 
 
 def bald_strategy(indices, predictions, batch_size):
-    p = predictions * np.log(predictions)
-    scores, indices2 = get_bald_batch(p, batch_size)
+    scores, indices2 = get_bald_batch(predictions, batch_size)
     return [indices[i] for i in indices2]
 
 
 def batchbald_strategy(indices, predictions, batch_size):
-    p = predictions * np.log(predictions)
-    scores, indices2 = get_batchbald_batch(p, batch_size)
+    scores, indices2 = get_batchbald_batch(predictions, batch_size)
     return [indices[i] for i in indices2]
 
 
