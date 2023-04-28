@@ -1,8 +1,6 @@
 
 B
 source/__init__.py,c/e/ce6c867ac62ff405fbff9dd373f139613a442dcf
-f
-6source/active_learning/active_learning_mnist_visual.py,8/3/83466bb48dbbdcdfc7478e9a02b5fe14c8dc28e2
 F
 source/dl_model/mlp.py,e/1/e141f6245e3445f76b8763f4f55271dee04e9d08
 F

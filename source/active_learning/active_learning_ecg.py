@@ -111,12 +111,19 @@ if __name__ == '__main__':
     es100 = es.sub_es(range(min(100, num_max)))
 
     label_encoder = LabelEncoder(CSN2022_LABELS)
-    func_ecg2x = lambda ecg: ecg.data.T[:, 0].reshape((-1, 1))
-    func_ecg2y = lambda ecg: label_encoder.label2y_single(ecg.label, onehot=True) if ecg.label else np.zeros(len(CSN2022_LABELS))
+
+    func_ecg2x = lambda ecg: ecg.data.T[:, 0]
+    func_ecg2y = lambda ecg: label_encoder.label2y_single(ecg.label, onehot=False) if ecg.label else 0
     digitizer = ESDigitizer(16, func_ecg2x, func_ecg2y)
     train_gen = digitizer.digitize_es(es1000)
     test_gen = digitizer.digitize_es(es100)
-    x_test, y_test = test_gen.to_xy()
+    x_test, y_test_num = test_gen.to_xy()
+
+    x_test = x_test.reshape((len(x_test), x_test.shape[-1], 1))
+    y_test = np.zeros((len(y_test_num), len(CSN2022_LABELS)))
+    for i in range(len(y_test)):
+        y_test[i, int(y_test_num[i])] = 1
+
     data = train_gen, x_test, y_test
 
     m = es1000[0].data.shape[1]

@@ -1,6 +1,7 @@
 """
 
-This code is highly inspired by gtoubassi from github: https://github.com/gtoubassi/active-learning-mnist/blob/master/Active_Learning_with_MNIST.ipynb
+The predictions are now: Shape: (N, K, C), probabilities of data points (N) with samples (K) and classes (C).
+
 
 """
 
@@ -10,6 +11,14 @@ import tensorflow as tf
 from source.dl_model.mlp import mlp_classifier
 import matplotlib.pyplot as plt
 
+from .BALD import get_bald_batch
+from .batchBALD import get_batchbald_batch
+
+
+def dropout_weights(weights, ratio):
+    dropout_mask = [np.random.binomial(1, 1 - ratio, w.shape) for w in weights]
+    return [w * mask for w, mask in zip(weights, dropout_mask)]
+
 
 def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
     """
@@ -18,6 +27,7 @@ def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
     :param prioritizer: lamdba: indices, predictions: sorted indices, ie. query strategy
     :return:
     """
+
     query_steps = 40
     query_size = 500
 
@@ -48,39 +58,35 @@ def eval_prioritization_strategy(data, model, prioritizer, verbose=True):
 
         # prepare for the next step of the loop
         rest_indices = train_indices[query_size:]
-        predictions = model.predict(x_train[rest_indices, ...])
 
+        # copy the models 5 times, all weights of the model is dropout with a ratio of 0.2:
+        predictions = []
+        for i in range(5):
+            mc_model = model.copy()
+            dropped_out_weights = dropout_weights(mc_model.get_weights(), 0.2)
+            mc_model.set_weights(dropped_out_weights)
+            predictions.append(mc_model.predict(x_train[rest_indices, ...]))
+
+        predictions = np.transform(predictions, (1, 0, 2))  # return (N_samples, K_models, C_classes)
         train_indices = prioritizer(rest_indices, predictions)
 
     print("- finished -")
     return test_accuracies
 
 
-trivial_strategy = lambda indices, pred: indices
+trivial_strategy = lambda indices, pred, batch_size: indices
 
 
-def max_entropy_strategy(indices, predictions):
+def bald_strategy(indices, predictions, batch_size):
     p = predictions * np.log(predictions)
-    p = -p.sum(axis=1)
-    p = list(zip(indices, p))
-    p.sort(reverse=True, key=lambda x: x[1])  # sort in descending order
-    return list(list(zip(*p))[0])
+    scores, indices2 = get_bald_batch(p, batch_size)
+    return [indices[i] for i in indices2]
 
 
-def least_margin_strategy(indices, predictions):
-    # breaking tie
-    p = -np.sort(-predictions)  # sort in descending order
-    p = p[:, 0] - p[:, 1]
-    p = list(zip(indices, p))
-    p.sort(key=lambda x: x[1])  # sort in ascending order
-    return list(list(zip(*p))[0])
-
-
-def least_confidence_strategy(indices, predictions):
-    # variation ratio
-    max_logit = list(zip(indices, np.amax(predictions, axis=1)))
-    max_logit.sort(key=lambda x: x[1])  # sort in ascending order
-    return list(list(zip(*max_logit))[0])
+def batchbald_strategy(indices, predictions, batch_size):
+    p = predictions * np.log(predictions)
+    scores, indices2 = get_batchbald_batch(p, batch_size)
+    return [indices[i] for i in indices2]
 
 
 if __name__ == '__main__':
@@ -92,13 +98,11 @@ if __name__ == '__main__':
 
     # get results of different AL method
     acc_baseline = eval_prioritization_strategy(data, mlp_classifier(), trivial_strategy)
-    acc_entropy = eval_prioritization_strategy(data, mlp_classifier(), max_entropy_strategy)
-    acc_bt = eval_prioritization_strategy(data, mlp_classifier(), least_margin_strategy)
-    acc_vr = eval_prioritization_strategy(data, mlp_classifier(), least_confidence_strategy)
+    acc_bald = eval_prioritization_strategy(data, mlp_classifier(), bald_strategy)
+    acc_batchbald = eval_prioritization_strategy(data, mlp_classifier(), batchbald_strategy)
 
     # visualize the performance difference
     plt.plot(acc_baseline, 'k', label='baseline')
-    plt.plot(acc_vr, 'b', label='least confidence')
-    plt.plot(acc_entropy, 'g', label='highest entropy')
-    plt.plot(acc_bt, 'r', label='least margin')
+    plt.plot(acc_bald, 'b', label='bald')
+    plt.plot(acc_batchbald, 'g', label='batchbald')
     plt.legend()
